@@ -5,8 +5,8 @@ import axios from 'axios';
 // /proxy/eticketing   → /eticketing
 
 const proxyBase = import.meta.env.VITE_PROXY_BASE || '';
-const charts     = axios.create({ baseURL: `${proxyBase}/proxy/charts`,     withCredentials: true });
-const eticketing = axios.create({ baseURL: `${proxyBase}/proxy/eticketing`, withCredentials: true });
+const charts     = axios.create({ baseURL: `${proxyBase}/proxy/charts/`,     withCredentials: true });
+const eticketing = axios.create({ baseURL: `${proxyBase}/proxy/eticketing/`, withCredentials: true });
 
 // IRCTC requires bmirak + greq headers on every request — add them via interceptors
 charts.interceptors.request.use(config => {
@@ -28,7 +28,7 @@ eticketing.interceptors.request.use(config => {
  * GET /eticketing/trainList
  */
 export const fetchTrainList = async () => {
-  const res = await eticketing.get('/trainList', {
+  const res = await eticketing.get('trainList', {
     transformResponse: [(data) => {
       if (Array.isArray(data)) return data;
       if (typeof data === 'string') {
@@ -71,7 +71,7 @@ export const fetchTrainSchedule = async (trainNo) => {
 
   // Attempt 1: online-charts trainSchedule (public)
   try {
-    const res = await charts.post('/api/trainSchedule', { trainNo: tn });
+    const res = await charts.post('api/trainSchedule', { trainNo: tn });
     console.log('[schedule/1-charts-post] status:', res.status, 'keys:', Object.keys(res.data || {}));
     const list = extract(res.data);
     if (list) return list;
@@ -79,7 +79,7 @@ export const fetchTrainSchedule = async (trainNo) => {
 
   // Attempt 2: online-charts GET schedule
   try {
-    const res = await charts.get(`/api/trainSchedule?trainNo=${tn}`);
+    const res = await charts.get(`api/trainSchedule?trainNo=${tn}`);
     console.log('[schedule/2-charts-get] status:', res.status, 'keys:', Object.keys(res.data || {}));
     const list = extract(res.data);
     if (list) return list;
@@ -87,7 +87,7 @@ export const fetchTrainSchedule = async (trainNo) => {
 
   // Attempt 3: non-protected eticketing GET
   try {
-    const res = await eticketing.get(`/mapps1/trnscheduleenquiry/${tn}`);
+    const res = await eticketing.get(`mapps1/trnscheduleenquiry/${tn}`);
     console.log('[schedule/3-eticketing-public] status:', res.status);
     const list = extract(res.data);
     if (list) return list;
@@ -95,7 +95,7 @@ export const fetchTrainSchedule = async (trainNo) => {
 
   // Attempt 4: non-protected eticketing alternative path
   try {
-    const res = await eticketing.get(`/trainschedule/${tn}`);
+    const res = await eticketing.get(`trainschedule/${tn}`);
     console.log('[schedule/4-eticketing-alt] status:', res.status);
     const list = extract(res.data);
     if (list) return list;
@@ -103,7 +103,7 @@ export const fetchTrainSchedule = async (trainNo) => {
 
   // Attempt 5: protected eticketing (requires IRCTC login session cookie)
   try {
-    const res = await eticketing.get(`/protected/mapps1/trnscheduleenquiry/${tn}`);
+    const res = await eticketing.get(`protected/mapps1/trnscheduleenquiry/${tn}`);
     console.log('[schedule/5-protected] status:', res.status);
     const list = extract(res.data);
     if (list) return list;
@@ -118,7 +118,7 @@ export const fetchTrainSchedule = async (trainNo) => {
  * POST /online-charts/api/trainComposition
  */
 export const fetchTrainComposition = async (trainNo, jDate, boardingStation) => {
-  const res = await charts.post('/api/trainComposition', { trainNo, jDate, boardingStation });
+  const res = await charts.post('api/trainComposition', { trainNo, jDate, boardingStation });
   return res.data;
 };
 
@@ -140,7 +140,7 @@ export const fetchVacantBerths = async ({
 
   // Attempt 1: coachComposition
   try {
-    const res1 = await charts.post('/api/coachComposition', {
+    const res1 = await charts.post('api/coachComposition', {
       trainNo, boardingStation,
       remoteStation: sourceStation, trainSourceStation: sourceStation,
       jDate, coach: coachName, cls,
@@ -152,7 +152,7 @@ export const fetchVacantBerths = async ({
   }
 
   // Attempt 2: vacantBerth
-  const res2 = await charts.post('/api/vacantBerth', {
+  const res2 = await charts.post('api/vacantBerth', {
     trainNo, boardingStation,
     remoteStation: sourceStation, trainSourceStation: sourceStation,
     jDate, cls, chartType: 2,
