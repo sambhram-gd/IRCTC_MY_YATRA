@@ -58,19 +58,29 @@ export default {
     const cookie = request.headers.get('cookie');
     if (cookie) headers.set('cookie', cookie);
 
-    const upstream = await fetch(targetUrl, {
-      method:  request.method,
-      headers,
-      body:    request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
-    });
+    try {
+      const upstream = await fetch(targetUrl, {
+        method:  request.method,
+        headers,
+        body:    request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+      });
 
-    const responseHeaders = new Headers(upstream.headers);
-    responseHeaders.set('Access-Control-Allow-Origin',  '*');
-    responseHeaders.set('Access-Control-Allow-Headers', '*');
+      const responseHeaders = new Headers(upstream.headers);
+      responseHeaders.set('Access-Control-Allow-Origin',  '*');
+      responseHeaders.set('Access-Control-Allow-Headers', '*');
 
-    return new Response(upstream.body, {
-      status:  upstream.status,
-      headers: responseHeaders,
-    });
+      return new Response(upstream.body, {
+        status:  upstream.status,
+        headers: responseHeaders,
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message, stack: e.stack }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
+    }
   },
 };
