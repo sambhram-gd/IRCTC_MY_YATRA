@@ -1,14 +1,10 @@
 /**
- * Cloudflare Worker — IRCTC API Proxy
+ * Cloudflare Worker — IRCTC API Proxy (Robust Version)
  *
- * Deploy this as a Cloudflare Worker at:
- *   https://dash.cloudflare.com → Workers & Pages → Create Worker
- *
- * This worker forwards:
- *   /proxy/charts/**     → https://www.irctc.co.in/online-charts/**
- *   /proxy/eticketing/** → https://www.irctc.co.in/eticketing/**
- *
- * Set your Vercel env var VITE_PROXY_BASE to your worker URL.
+ * This worker solves Cloudflare 520 errors by:
+ *   1. Buffering the request body to avoid streaming lockups.
+ *   2. Only copying safe response headers (avoiding Content-Encoding/Content-Length mismatch).
+ *   3. Buffering the response via arrayBuffer.
  */
 export default {
   async fetch(request) {
@@ -39,7 +35,7 @@ export default {
 
     const targetUrl = `https://www.irctc.co.in${targetPath}${url.search}`;
 
-    // Clone and enrich request headers to spoof browser
+    // Spoof browser headers
     const headers = new Headers();
     headers.set('accept',          'application/json, text/plain, */*');
     headers.set('accept-language', 'en-US,en;q=0.9');
@@ -52,24 +48,41 @@ export default {
     headers.set('sec-fetch-dest',  'empty');
     headers.set('sec-fetch-mode',  'cors');
     headers.set('sec-fetch-site',  'same-origin');
-    if (request.method === 'POST') headers.set('content-type', 'application/json');
 
-    // Forward client cookies (enables protected endpoints when user is logged into IRCTC)
+    // Forward cookies
     const cookie = request.headers.get('cookie');
     if (cookie) headers.set('cookie', cookie);
+
+    let body = undefined;
+    if (request.method === 'POST') {
+      headers.set('content-type', 'application/json');
+      body = await request.text();
+    }
 
     try {
       const upstream = await fetch(targetUrl, {
         method:  request.method,
         headers,
-        body:    request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+        body,
       });
 
-      const responseHeaders = new Headers(upstream.headers);
+      // Only copy safe response headers to prevent Cloudflare 520 errors
+      // (Cloudflare handles content-encoding/compression automatically)
+      const responseHeaders = new Headers();
       responseHeaders.set('Access-Control-Allow-Origin',  '*');
       responseHeaders.set('Access-Control-Allow-Headers', '*');
+      responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 
-      return new Response(upstream.body, {
+      const contentType = upstream.headers.get('content-type');
+      if (contentType) responseHeaders.set('Content-Type', contentType);
+
+      const setCookie = upstream.headers.get('set-cookie');
+      if (setCookie) responseHeaders.set('Set-Cookie', setCookie);
+
+      // Buffer response data
+      const data = await upstream.arrayBuffer();
+
+      return new Response(data, {
         status:  upstream.status,
         headers: responseHeaders,
       });
