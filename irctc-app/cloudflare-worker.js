@@ -53,6 +53,22 @@ export default {
       }
     }
 
+    if (url.pathname === '/test-corsproxy') {
+      try {
+        const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://www.irctc.co.in/online-charts/'));
+        const text = await res.text();
+        return new Response(JSON.stringify({ success: true, status: res.status, preview: text.slice(0, 500) }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+
     let targetPath;
     if (url.pathname.startsWith('/proxy/charts/')) {
       targetPath = '/online-charts/' + url.pathname.slice('/proxy/charts/'.length);
