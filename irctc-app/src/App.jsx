@@ -172,6 +172,7 @@ export default function App() {
       const compList = extractStations(comp);
       if (compList) {
         setStations(normaliseStations(compList));
+        setScheduleLoading(false);
         return; // got full list, done
       }
     } catch (e) {

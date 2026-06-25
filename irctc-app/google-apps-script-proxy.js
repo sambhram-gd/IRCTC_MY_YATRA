@@ -55,16 +55,27 @@ function handleRequest(e, method) {
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
   };
 
+  // Determine actual target method and payload
+  var targetMethod = method;
+  var payload = null;
+
+  if (e.parameter.payload) {
+    targetMethod = 'POST';
+    payload = decodeURIComponent(e.parameter.payload);
+  } else if (method === 'POST' && e.postData && e.postData.contents) {
+    payload = e.postData.contents;
+  }
+
   var options = {
-    'method': method,
+    'method': targetMethod,
     'headers': headers,
     'muteHttpExceptions': true,
     'followRedirects': true
   };
 
-  if (method === 'POST' && e.postData && e.postData.contents) {
+  if (payload) {
     options.contentType = 'application/json';
-    options.payload = e.postData.contents;
+    options.payload = payload;
   }
 
   try {

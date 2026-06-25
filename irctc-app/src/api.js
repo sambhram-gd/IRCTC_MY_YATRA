@@ -12,6 +12,8 @@ const apiRequest = async (method, type, path, data = null, options = {}) => {
   const targetUrl = `https://www.irctc.co.in${prefix}${path}`;
 
   let url;
+  let reqMethod = method.toLowerCase();
+  let reqData = data;
   const headers = {
     'bmirak': 'webbm',
     'greq': Date.now().toString(),
@@ -19,8 +21,15 @@ const apiRequest = async (method, type, path, data = null, options = {}) => {
   };
 
   if (proxyBase) {
-    // Production: Route to Google Apps Script proxy via URL parameter
-    url = `${proxyBase}?url=${encodeURIComponent(targetUrl)}`;
+    // Production: Route to Google Apps Script proxy.
+    // Wrap POST requests as GET requests to avoid 405 Method Not Allowed redirects.
+    let target = `${proxyBase}?url=${encodeURIComponent(targetUrl)}`;
+    if (reqMethod === 'post' && data) {
+      target += `&payload=${encodeURIComponent(JSON.stringify(data))}`;
+      reqMethod = 'get';
+      reqData = null;
+    }
+    url = target;
   } else {
     // Local: Route to Vite dev server proxy
     const localPrefix = type === 'charts' ? '/proxy/charts/' : '/proxy/eticketing/';
@@ -28,9 +37,9 @@ const apiRequest = async (method, type, path, data = null, options = {}) => {
   }
 
   return axios({
-    method,
+    method: reqMethod,
     url,
-    data,
+    data: reqData,
     headers,
     ...options
   });
