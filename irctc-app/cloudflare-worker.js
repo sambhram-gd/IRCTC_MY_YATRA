@@ -21,6 +21,22 @@ export default {
       });
     }
 
+    if (url.pathname === '/test') {
+      try {
+        const res = await fetch('https://httpbin.org/headers');
+        const json = await res.json();
+        return new Response(JSON.stringify({ success: true, json }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+
     let targetPath;
     if (url.pathname.startsWith('/proxy/charts/')) {
       targetPath = '/online-charts/' + url.pathname.slice('/proxy/charts/'.length);
