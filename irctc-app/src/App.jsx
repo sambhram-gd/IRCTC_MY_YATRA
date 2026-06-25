@@ -189,8 +189,12 @@ export default function App() {
       const status = err?.response?.status;
       setCompError(
         status === 401 || status === 403
-          ? 'Session expired — open irctc.co.in in another tab and log in.'
-          : `Error ${status ?? 'network'}: ${err?.response?.data?.message ?? err.message}`
+          ? 'IRCTC requires an active session. Open irctc.co.in in another tab, log in, then try again here.'
+          : status === 404
+          ? 'Train not found or chart not yet prepared for this date. Try a different date.'
+          : status === 500
+          ? 'IRCTC server error. Try again in a few seconds.'
+          : `Could not fetch chart (${status ?? 'network error'}): ${err?.response?.data?.message ?? err.message}`
       );
     } finally {
       if (!silent) setCompLoading(false);
