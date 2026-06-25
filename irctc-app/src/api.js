@@ -50,39 +50,67 @@ export const fetchTrainList = async () => {
 
 /**
  * Fetch station list for a train.
- * Tries 3 endpoints in priority order (most public → session-required):
- *   1. POST /online-charts/api/trainSchedule  — fully public
- *   2. GET  /eticketing/mapps1/trnscheduleenquiry/{trainNo}  — non-protected
- *   3. GET  /eticketing/protected/mapps1/trnscheduleenquiry/{trainNo}  — needs login
+ * Tries multiple public IRCTC endpoints before falling back to protected one.
  */
 export const fetchTrainSchedule = async (trainNo) => {
+  const tn = trainNo.trim();
+
   const extract = (raw) => {
-    const list = raw?.stationList ?? raw?.trainScheduleDTO?.stationList ?? raw?.stoppage ?? (Array.isArray(raw) ? raw : null);
+    if (!raw) return null;
+    const list =
+      raw?.stationList ??
+      raw?.trainScheduleDTO?.stationList ??
+      raw?.body?.stationList ??
+      raw?.stoppage ??
+      raw?.haltList ??
+      raw?.stations ??
+      (Array.isArray(raw) ? raw : null);
     return list && list.length > 0 ? list : null;
   };
 
-  // Attempt 1: public charts schedule
+  // Attempt 1: online-charts trainSchedule (public)
   try {
-    const res = await charts.post('/api/trainSchedule', { trainNo: trainNo.trim() });
+    const res = await charts.post('/api/trainSchedule', { trainNo: tn });
+    console.log('[schedule/1-charts-post] status:', res.status, 'keys:', Object.keys(res.data || {}));
     const list = extract(res.data);
     if (list) return list;
-  } catch (e) {
-    console.warn('[schedule/charts]', e.message);
-  }
+  } catch (e) { console.warn('[schedule/1]', e.message); }
 
-  // Attempt 2: non-protected eticketing
+  // Attempt 2: online-charts GET schedule
   try {
-    const res = await eticketing.get(`/mapps1/trnscheduleenquiry/${trainNo.trim()}`);
+    const res = await charts.get(`/api/trainSchedule?trainNo=${tn}`);
+    console.log('[schedule/2-charts-get] status:', res.status, 'keys:', Object.keys(res.data || {}));
     const list = extract(res.data);
     if (list) return list;
-  } catch (e) {
-    console.warn('[schedule/eticketing-public]', e.message);
-  }
+  } catch (e) { console.warn('[schedule/2]', e.message); }
 
-  // Attempt 3: protected eticketing (requires IRCTC login session)
-  const res = await eticketing.get(`/protected/mapps1/trnscheduleenquiry/${trainNo.trim()}`);
-  return extract(res.data) || [];
+  // Attempt 3: non-protected eticketing GET
+  try {
+    const res = await eticketing.get(`/mapps1/trnscheduleenquiry/${tn}`);
+    console.log('[schedule/3-eticketing-public] status:', res.status);
+    const list = extract(res.data);
+    if (list) return list;
+  } catch (e) { console.warn('[schedule/3]', e.message); }
+
+  // Attempt 4: non-protected eticketing alternative path
+  try {
+    const res = await eticketing.get(`/trainschedule/${tn}`);
+    console.log('[schedule/4-eticketing-alt] status:', res.status);
+    const list = extract(res.data);
+    if (list) return list;
+  } catch (e) { console.warn('[schedule/4]', e.message); }
+
+  // Attempt 5: protected eticketing (requires IRCTC login session cookie)
+  try {
+    const res = await eticketing.get(`/protected/mapps1/trnscheduleenquiry/${tn}`);
+    console.log('[schedule/5-protected] status:', res.status);
+    const list = extract(res.data);
+    if (list) return list;
+  } catch (e) { console.warn('[schedule/5]', e.message); }
+
+  return [];
 };
+
 
 /**
  * Coach-level vacancy overview.

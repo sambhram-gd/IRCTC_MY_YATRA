@@ -140,29 +140,59 @@ export default function App() {
     setBdd(null);
     if (!no) return;
     setScheduleLoading(true);
+
+    // Helper: extract station list from any IRCTC response shape
+    const extractStations = (raw) => {
+      if (!raw) return null;
+      const list =
+        raw?.stationList ??
+        raw?.trainScheduleDTO?.stationList ??
+        raw?.body?.stationList ??
+        raw?.stoppage ??
+        raw?.haltList ??
+        raw?.stations ??
+        raw?.routeList ??
+        (Array.isArray(raw) ? raw : null);
+      return list && list.length > 0 ? list : null;
+    };
+
     try {
-      // Public API: Fetch train route using chart composition endpoint without a boarding station
-      const raw = await fetchTrainComposition(no, jDate, '');
-      const list = raw?.stationList || raw?.trainScheduleDTO?.stationList || raw?.stoppage || (Array.isArray(raw) ? raw : null);
-      if (list && list.length > 0) {
-        setStations(normaliseStations(list));
-      } else {
-        // Fallback to protected API
-        const schedRaw = await fetchTrainSchedule(no);
-        setStations(normaliseStations(schedRaw));
+      // Step 1: Try trainComposition with empty boarding → sometimes includes stationList
+      const comp = await fetchTrainComposition(no, jDate, '');
+
+      // Immediately seed from/to so user always has at least 2 stations
+      const seedFromTo = (from, to) => {
+        const seeds = [from, to].filter(Boolean).map(code => ({
+          stationCode: code, stationName: code, serialNumber: '', arrival: '', departure: '', distance: ''
+        }));
+        if (seeds.length > 0) setStations(seeds);
+      };
+      if (comp?.from || comp?.to) seedFromTo(comp.from, comp.to);
+
+      const compList = extractStations(comp);
+      if (compList) {
+        setStations(normaliseStations(compList));
+        return; // got full list, done
       }
     } catch (e) {
-      console.warn('Schedule fetch failed via public API, trying protected API:', e.message);
-      try {
-        const schedRaw = await fetchTrainSchedule(no);
-        setStations(normaliseStations(schedRaw));
-      } catch (err) {
-        console.warn('Protected schedule fetch also failed:', err.message);
+      console.warn('[handleTrainSelect] composition fetch failed:', e.message);
+    }
+
+    // Step 2: Try dedicated schedule endpoints (multi-tier)
+    try {
+      const schedRaw = await fetchTrainSchedule(no);
+      const list = extractStations(schedRaw) ?? (Array.isArray(schedRaw) && schedRaw.length > 0 ? schedRaw : null);
+      if (list) {
+        setStations(normaliseStations(list));
       }
+    } catch (err) {
+      console.warn('[handleTrainSelect] all schedule fetches failed:', err.message);
+      // stations already seeded with from/to above — user can still proceed
     } finally {
       setScheduleLoading(false);
     }
   };
+
 
   // Get chart
   const getChart = async (silent = false) => {
