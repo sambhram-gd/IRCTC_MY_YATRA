@@ -18,6 +18,7 @@ const makeProxy = (strip, target) => ({
 });
 
 export default defineConfig({
+  base: '/IRCTC_MY_YATRA/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
