@@ -69,6 +69,38 @@ export default {
       }
     }
 
+    if (url.pathname === '/test-allorigins') {
+      try {
+        const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.irctc.co.in/online-charts/'));
+        const json = await res.json();
+        return new Response(JSON.stringify({ success: true, status: res.status, preview: (json.contents || '').slice(0, 500) }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+
+    if (url.pathname === '/test-thingproxy') {
+      try {
+        const res = await fetch('https://thingproxy.freeboard.io/fetch/https://www.irctc.co.in/online-charts/');
+        const text = await res.text();
+        return new Response(JSON.stringify({ success: true, status: res.status, preview: text.slice(0, 500) }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+    }
+
     let targetPath;
     if (url.pathname.startsWith('/proxy/charts/')) {
       targetPath = '/online-charts/' + url.pathname.slice('/proxy/charts/'.length);

@@ -4,9 +4,16 @@ import axios from 'axios';
 // /proxy/charts       → /online-charts
 // /proxy/eticketing   → /eticketing
 
-const proxyBase = import.meta.env.VITE_PROXY_BASE || '';
-const charts     = axios.create({ baseURL: `${proxyBase}/proxy/charts`,     withCredentials: true });
-const eticketing = axios.create({ baseURL: `${proxyBase}/proxy/eticketing`, withCredentials: true });
+const isProd = import.meta.env.PROD;
+const chartsBase = isProd 
+  ? 'https://corsproxy.io/?https://www.irctc.co.in/online-charts' 
+  : '/proxy/charts';
+const eticketingBase = isProd 
+  ? 'https://corsproxy.io/?https://www.irctc.co.in/eticketing' 
+  : '/proxy/eticketing';
+
+const charts     = axios.create({ baseURL: chartsBase,     withCredentials: true });
+const eticketing = axios.create({ baseURL: eticketingBase, withCredentials: true });
 
 // IRCTC requires bmirak + greq headers on every request — add them via interceptors
 charts.interceptors.request.use(config => {
