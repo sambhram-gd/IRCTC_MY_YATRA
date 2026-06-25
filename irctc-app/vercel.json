@@ -1,23 +1,5 @@
 {
-  "functions": {
-    "api/proxy.js": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 15
-    },
-    "api/debug.js": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 15
-    }
-  },
   "rewrites": [
-    {
-      "source": "/proxy/charts/:path*",
-      "destination": "/api/proxy?target=charts&path=:path*"
-    },
-    {
-      "source": "/proxy/eticketing/:path*",
-      "destination": "/api/proxy?target=eticketing&path=:path*"
-    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
