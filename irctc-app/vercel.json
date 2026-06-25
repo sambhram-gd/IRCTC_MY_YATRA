@@ -1,4 +1,14 @@
 {
+  "functions": {
+    "api/proxy.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 15
+    },
+    "api/debug.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 15
+    }
+  },
   "rewrites": [
     {
       "source": "/proxy/charts/:path*",

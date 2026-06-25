@@ -1,27 +1,21 @@
+// CommonJS syntax required for Vercel serverless functions
+const axios = require('axios');
+
 /**
  * Vercel Serverless Proxy for IRCTC API
- * Routes:
- *   /proxy/charts/**     → https://www.irctc.co.in/online-charts/**
- *   /proxy/eticketing/** → https://www.irctc.co.in/eticketing/**
- *
- * This function adds all mandatory IRCTC headers (bmirak, greq, Origin, Referer)
- * and forwards cookies from the client browser to support authenticated endpoints.
+ * /proxy/charts/**     → https://www.irctc.co.in/online-charts/**
+ * /proxy/eticketing/** → https://www.irctc.co.in/eticketing/**
  */
-export default async function handler(req, res) {
-  // CORS headers
+module.exports = async function handler(req, res) {
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', '*');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
   const { target } = req.query;
-  // path* wildcard comes as array or string — join it
-  const pathParts = req.query.path;
-  const path = Array.isArray(pathParts) ? pathParts.join('/') : (pathParts || '');
+  const pathParts  = req.query.path;
+  const path       = Array.isArray(pathParts) ? pathParts.join('/') : (pathParts || '');
 
   const baseMap = {
     charts:     'https://www.irctc.co.in/online-charts',
@@ -35,50 +29,48 @@ export default async function handler(req, res) {
   }
 
   const targetUrl = `${base}/${path}`;
+  console.log(`[proxy] ${req.method} ${targetUrl}`);
 
-  // Mandatory IRCTC request headers
-  const forwardHeaders = {
+  const reqHeaders = {
     'accept':          'application/json, text/plain, */*',
     'accept-language': 'en-US,en;q=0.9',
     'bmirak':          'webbm',
     'greq':            Date.now().toString(),
     'origin':          'https://www.irctc.co.in',
     'referer':         'https://www.irctc.co.in/online-charts/',
-    'user-agent':      req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'user-agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
   };
 
   if (req.method === 'POST') {
-    forwardHeaders['content-type'] = 'application/json';
+    reqHeaders['content-type'] = 'application/json';
   }
 
-  // Forward the client's cookies (needed for authenticated IRCTC endpoints)
+  // Forward the client's IRCTC session cookies (enables protected endpoints)
   if (req.headers.cookie) {
-    forwardHeaders['cookie'] = req.headers.cookie;
-  }
-
-  let body;
-  if (req.method === 'POST' && req.body) {
-    body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    reqHeaders['cookie'] = req.headers.cookie;
   }
 
   try {
-    const upstream = await fetch(targetUrl, {
-      method:  req.method,
-      headers: forwardHeaders,
-      body,
+    const upstream = await axios({
+      method:       req.method.toLowerCase(),
+      url:          targetUrl,
+      headers:      reqHeaders,
+      data:         req.method === 'POST' ? req.body : undefined,
+      responseType: 'text',
+      timeout:      8000,
+      // Don't throw on non-2xx — forward status as-is
+      validateStatus: () => true,
     });
 
-    const text        = await upstream.text();
-    const contentType = upstream.headers.get('content-type') || 'application/json';
-
-    // Forward Set-Cookie so the browser stores IRCTC session cookies
-    const setCookie = upstream.headers.get('set-cookie');
+    // Forward Set-Cookie so browser keeps IRCTC session alive
+    const setCookie = upstream.headers['set-cookie'];
     if (setCookie) res.setHeader('Set-Cookie', setCookie);
 
+    const contentType = upstream.headers['content-type'] || 'application/json';
     res.setHeader('Content-Type', contentType);
-    res.status(upstream.status).send(text);
+    res.status(upstream.status).send(upstream.data);
   } catch (err) {
     console.error('[proxy] error:', err.message);
-    res.status(502).json({ error: `Proxy failed: ${err.message}` });
+    res.status(502).json({ error: `Upstream proxy failed: ${err.message}` });
   }
-}
+};
