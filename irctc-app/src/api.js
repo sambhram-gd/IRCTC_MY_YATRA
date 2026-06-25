@@ -36,13 +36,27 @@ const apiRequest = async (method, type, path, data = null, options = {}) => {
     url = `${localPrefix}${path}`;
   }
 
-  return axios({
+  const res = await axios({
     method: reqMethod,
     url,
     data: reqData,
     headers,
     ...options
   });
+
+  // If the proxy returns the JSON response as a raw text string, parse it automatically
+  if (typeof res.data === 'string') {
+    const trimmed = res.data.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        res.data = JSON.parse(trimmed);
+      } catch (e) {
+        console.warn('Failed to auto-parse proxy response string:', e.message);
+      }
+    }
+  }
+
+  return res;
 };
 
 /**
