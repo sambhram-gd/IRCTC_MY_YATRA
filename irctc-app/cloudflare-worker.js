@@ -1,104 +1,25 @@
 /**
- * Cloudflare Worker — IRCTC API Proxy (Robust Version)
+ * Cloudflare Worker — IRCTC API Proxy (Robust & CORS-Compliant Version)
  *
- * This worker solves Cloudflare 520 errors by:
- *   1. Buffering the request body to avoid streaming lockups.
- *   2. Only copying safe response headers (avoiding Content-Encoding/Content-Length mismatch).
- *   3. Buffering the response via arrayBuffer.
+ * This worker solves:
+ *   1. Cloudflare 520 errors by copying only safe response headers and buffering responses.
+ *   2. CORS errors by echoing the requesting origin and allowing credentials (withCredentials).
  */
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+    const origin = request.headers.get('Origin') || '*';
 
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
-          'Access-Control-Allow-Origin':  '*',
+          'Access-Control-Allow-Origin':  origin,
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
           'Access-Control-Allow-Headers': '*',
+          'Access-Control-Allow-Credentials': 'true',
         },
       });
-    }
-
-    if (url.pathname === '/test') {
-      try {
-        const res = await fetch('https://httpbin.org/headers');
-        const json = await res.json();
-        return new Response(JSON.stringify({ success: true, json }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: e.message }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-    }
-
-    if (url.pathname === '/test-irctc') {
-      try {
-        const res = await fetch('https://www.irctc.co.in/online-charts/');
-        const text = await res.text();
-        return new Response(JSON.stringify({ success: true, status: res.status, preview: text.slice(0, 500) }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-    }
-
-    if (url.pathname === '/test-corsproxy') {
-      try {
-        const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://www.irctc.co.in/online-charts/'));
-        const text = await res.text();
-        return new Response(JSON.stringify({ success: true, status: res.status, preview: text.slice(0, 500) }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-    }
-
-    if (url.pathname === '/test-allorigins') {
-      try {
-        const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.irctc.co.in/online-charts/'));
-        const json = await res.json();
-        return new Response(JSON.stringify({ success: true, status: res.status, preview: (json.contents || '').slice(0, 500) }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-    }
-
-    if (url.pathname === '/test-thingproxy') {
-      try {
-        const res = await fetch('https://thingproxy.freeboard.io/fetch/https://www.irctc.co.in/online-charts/');
-        const text = await res.text();
-        return new Response(JSON.stringify({ success: true, status: res.status, preview: text.slice(0, 500) }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, error: e.message, stack: e.stack }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
     }
 
     let targetPath;
@@ -109,7 +30,11 @@ export default {
     } else {
       return new Response(JSON.stringify({ error: 'Unknown proxy path' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Credentials': 'true'
+        },
       });
     }
 
@@ -147,11 +72,11 @@ export default {
       });
 
       // Only copy safe response headers to prevent Cloudflare 520 errors
-      // (Cloudflare handles content-encoding/compression automatically)
       const responseHeaders = new Headers();
-      responseHeaders.set('Access-Control-Allow-Origin',  '*');
+      responseHeaders.set('Access-Control-Allow-Origin',  origin);
       responseHeaders.set('Access-Control-Allow-Headers', '*');
       responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      responseHeaders.set('Access-Control-Allow-Credentials', 'true');
 
       const contentType = upstream.headers.get('content-type');
       if (contentType) responseHeaders.set('Content-Type', contentType);
@@ -171,7 +96,8 @@ export default {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Credentials': 'true'
         }
       });
     }
