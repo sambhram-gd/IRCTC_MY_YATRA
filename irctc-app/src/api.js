@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const proxyBase = import.meta.env.VITE_PROXY_BASE || '';
+console.log('Current VITE_PROXY_BASE value in client:', import.meta.env.VITE_PROXY_BASE);
 
 /**
  * Unified request helper that routes requests to:
