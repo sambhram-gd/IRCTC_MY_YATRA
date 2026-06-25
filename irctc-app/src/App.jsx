@@ -289,8 +289,8 @@ export default function App() {
         <header className="absolute top-0 left-0 right-0 z-40 border-b border-white/10 bg-transparent">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Train className="w-6 h-6 text-green-400" />
-              <span className="font-bold tracking-wide text-white font-['Inter'] text-xl">IRCTC Vacancy</span>
+              <img src="/logo.png" alt="My IRCTC Yatra" className="w-9 h-9 object-contain drop-shadow-lg" />
+              <span className="font-bold tracking-wide text-white font-['Inter'] text-xl">My IRCTC Yatra</span>
             </div>
             <div className="flex items-center gap-4">
               {lastUpdated && (
@@ -314,11 +314,14 @@ export default function App() {
 
         {/* Hero Text */}
         <div className="relative z-10 text-center px-4 mt-10">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <img src="/logo.png" alt="My IRCTC Yatra Logo" className="w-16 h-16 object-contain drop-shadow-2xl" />
+          </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight drop-shadow-2xl font-['Inter']">
-            Find Your Perfect Seat
+            My IRCTC Yatra
           </h1>
           <p className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto font-medium drop-shadow-md">
-            Real-time IRCTC reservation charts, vacancy status, and premium coach layouts.
+            Real-time reservation charts, vacancy status, and premium coach layouts.
           </p>
         </div>
       </div>

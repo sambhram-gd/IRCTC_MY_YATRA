@@ -1,17 +1,11 @@
 import axios from 'axios';
 
 // Proxy routes (Vite dev server forwards these to irctc.co.in):
-// Production uses corsproxy.io since GitHub Pages doesn't have a backend proxy.
+// /proxy/charts       → /online-charts
+// /proxy/eticketing   → /eticketing
 
-const IS_PROD = import.meta.env.PROD;
-
-const getBaseUrl = (path) => {
-  if (!IS_PROD) return `/proxy${path === '/online-charts' ? '/charts' : path}`;
-  return `https://corsproxy.io/?url=${encodeURIComponent(`https://www.irctc.co.in${path}`)}`;
-};
-
-const charts = axios.create({ baseURL: getBaseUrl('/online-charts'), withCredentials: !IS_PROD });
-const eticketing = axios.create({ baseURL: getBaseUrl('/eticketing'), withCredentials: !IS_PROD });
+const charts = axios.create({ baseURL: '/proxy/charts', withCredentials: true });
+const eticketing = axios.create({ baseURL: '/proxy/eticketing', withCredentials: true });
 
 /**
  * Fetch full train list → ["20688 - SBC UBL SF EXP", ...]
