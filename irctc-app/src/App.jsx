@@ -387,26 +387,14 @@ export default function App() {
             </div>
 
             {/* Boarding */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-4">
               <StationSelect
                 label="Boarding Station"
                 value={boardingCode}
-                onChange={v => { setBoardingCode(v); setDestCode(''); setComposition(null); setSelectedCoach(null); setBdd(null); }}
+                onChange={v => { setBoardingCode(v); setComposition(null); setSelectedCoach(null); setBdd(null); }}
                 stations={stations}
                 placeholder={scheduleLoading ? 'Loading...' : stations.length ? 'Select boarding' : 'Select train first'}
                 highlight={!!trainNo && !boardingCode}
-              />
-            </div>
-
-            {/* Destination */}
-            <div className="lg:col-span-2">
-              <StationSelect
-                label="Destination"
-                value={destCode}
-                onChange={setDestCode}
-                stations={destStations}
-                placeholder={boardingCode ? 'Select destination' : 'Select boarding first'}
-                highlight={!!trainNo && !!boardingCode && !destCode}
               />
             </div>
 
