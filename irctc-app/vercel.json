@@ -1,15 +1,15 @@
 {
   "rewrites": [
     {
-      "source": "/proxy/charts/:match*",
-      "destination": "https://www.irctc.co.in/online-charts/:match*"
+      "source": "/proxy/charts/:path*",
+      "destination": "/api/proxy?target=charts&path=:path*"
     },
     {
-      "source": "/proxy/eticketing/:match*",
-      "destination": "https://www.irctc.co.in/eticketing/:match*"
+      "source": "/proxy/eticketing/:path*",
+      "destination": "/api/proxy?target=eticketing&path=:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
