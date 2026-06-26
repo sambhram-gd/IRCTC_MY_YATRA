@@ -1,3 +1,9 @@
 /IRCTC_VACANCY_CHART_SPEC.md
 .vercel
 .env*
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
