@@ -16,10 +16,15 @@ const apiRequest = async (method, type, path, data = null, options = {}) => {
   let reqMethod = method.toLowerCase();
   let reqData = data;
   const headers = {
-    'bmirak': 'webbm',
-    'greq': Date.now().toString(),
     'accept': 'application/json, text/plain, */*'
   };
+
+  if (!proxyBase) {
+    // Only send custom headers on local proxies where CORS preflight is not an issue.
+    // For Google Apps Script, we must omit these to keep the request "simple" and bypass CORS preflight.
+    headers['bmirak'] = 'webbm';
+    headers['greq'] = Date.now().toString();
+  }
 
   if (proxyBase) {
     // Production: Route to Google Apps Script proxy.
